@@ -147,7 +147,7 @@ public class ShareMenuReactView: NSObject {
                                         // Writing the image to the URL
                                         try imageData.write(to: imageURL)
 
-                                        results.append([DATA_KEY: imageUrl.absoluteString, MIME_TYPE_KEY: imageURL.extractMimeType()])
+                                        results.append([DATA_KEY: imageURL.absoluteString, MIME_TYPE_KEY: imageURL.extractMimeType()])
                                     } catch {
                                         callback(nil, NSException(name: NSExceptionName(rawValue: "Error"), reason:"Can't load image", userInfo:nil))
                                     }

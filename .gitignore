@@ -58,3 +58,6 @@ build/
 
 # IDE Files
 .idea/
+
+# Android
+android/.gradle
