@@ -10,16 +10,19 @@ import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.bridge.WritableNativeMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 
 import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Bundle;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import java.util.ArrayList;
+import org.json.JSONObject;
 
 public class ShareMenuModule extends ReactContextBaseJavaModule implements ActivityEventListener {
 
@@ -29,6 +32,7 @@ public class ShareMenuModule extends ReactContextBaseJavaModule implements Activ
   // Keys
   final String MIME_TYPE_KEY = "mimeType";
   final String DATA_KEY = "data";
+  final String EXTRA_DATA_KEY = "extraData";
 
   private ReactContext mReactContext;
 
@@ -61,6 +65,19 @@ public class ShareMenuModule extends ReactContextBaseJavaModule implements Activ
     if (Intent.ACTION_SEND.equals(action)) {
       if ("text/plain".equals(type)) {
         data.putString(DATA_KEY, intent.getStringExtra(Intent.EXTRA_TEXT));
+        Bundle bundle = intent.getExtras();
+        if (bundle != null) {
+          WritableMap record = new WritableNativeMap();
+          for (String key : bundle.keySet()) {
+            record.putString(key, bundle.get(key).toString());
+          }
+          try {
+            JSONObject jsonRecord = MapUtil.toJSONObject(record);
+            data.putString(EXTRA_DATA_KEY, jsonRecord.toString());
+          } catch(Exception e) {
+            data.putString(EXTRA_DATA_KEY, null);
+          }
+        }
         return data;
       }
 
