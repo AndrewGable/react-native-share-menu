@@ -23,7 +23,7 @@ public let COULD_NOT_PARSE_IMG_ERROR = "Couldn't parse image"
 public let COULD_NOT_SAVE_FILE_ERROR = "Couldn't save file on disk"
 public let NO_EXTENSION_CONTEXT_ERROR = "No extension context attached"
 public let NO_DELEGATE_ERROR = "No ReactShareViewDelegate attached"
-public let COULD_NOT_FIND_ITEM_ERROR = "Couldn't find item attached to this share"
+public let COULD_NOT_FIND_ITEMS_ERROR = "Couldn't find items attached to this share"
 
 // MARK: Keys
 

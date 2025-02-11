@@ -10,5 +10,5 @@ public protocol ReactShareViewDelegate {
 
     func openApp()
 
-    func continueInApp(with item: NSExtensionItem, and extraData: [String:Any]?)
+    func continueInApp(with items: [NSExtensionItem], and extraData: [String:Any]?)
 }

@@ -13,7 +13,7 @@ class ReactShareViewController: ShareViewController, RCTBridgeDelegate, ReactSha
   func sourceURL(for bridge: RCTBridge!) -> URL! {
 #if DEBUG
     return RCTBundleURLProvider.sharedSettings()?
-      .jsBundleURL(forBundleRoot: "index.share", fallbackResource: nil)
+      .jsBundleURL(forBundleRoot: "index.share")
 #else
     return Bundle.main.url(forResource: "main", withExtension: "jsbundle")
 #endif
@@ -62,7 +62,7 @@ class ReactShareViewController: ShareViewController, RCTBridgeDelegate, ReactSha
     self.openHostApp()
   }
 
-  func continueInApp(with item: NSExtensionItem, and extraData: [String:Any]?) {
-    handlePost(item, extraData: extraData)
+  func continueInApp(with items: [NSExtensionItem], and extraData: [String:Any]?) {
+    handlePost(items, extraData: extraData)
   }
 }

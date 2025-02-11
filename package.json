@@ -1,7 +1,7 @@
 {
   "name": "react-native-share-menu",
   "description": "Add your app as a target for sharing from other apps and write iOS Share Extensions in React Native.",
-  "version": "5.0.3",
+  "version": "6.0.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/meedan/react-native-share-menu.git"

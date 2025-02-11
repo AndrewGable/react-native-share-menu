@@ -106,7 +106,6 @@ public class ShareMenuModule extends ReactContextBaseJavaModule implements Activ
     Activity currentActivity = getCurrentActivity();
 
     if (currentActivity == null) {
-      successCallback.invoke(null);
       return;
     }
 
@@ -128,6 +127,16 @@ public class ShareMenuModule extends ReactContextBaseJavaModule implements Activ
     ReadableMap shared = extractShared(intent);
     successCallback.invoke(shared);
     clearSharedText();
+  }
+
+  @ReactMethod
+  public void addListener(String eventName) {
+    // Required for RN built in Event Emitter Calls.
+  }
+
+  @ReactMethod
+  public void removeListeners(Integer count) {
+    // Required for RN built in Event Emitter Calls.
   }
 
   private void dispatchEvent(ReadableMap shared) {

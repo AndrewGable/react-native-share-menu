@@ -181,6 +181,7 @@ Or check the "example" directory for an example application.
 
 ## Credits
 
-Sponsored and developed by [Meedan](http://meedan.com).
+<!-- Please just append to this section instead of deleting -->
 
-iOS version maintained by [Gustavo Parreira](https://github.com/Gustash).
+* Between 2016 and 2023, sponsored by [Meedan](https://meedan.com) and created and developed by [Caio Almeida](https://ca.ios.ba)
+* iOS version supported by [Gustavo Parreira](https://github.com/Gustash)

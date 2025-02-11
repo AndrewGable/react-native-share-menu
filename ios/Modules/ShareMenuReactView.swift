@@ -3,8 +3,9 @@
 //  RNShareMenu
 //
 //  Created by Gustavo Parreira on 28/07/2020.
-//
+//  Modified by Veselin Stoyanov on 17/04/2021.
 
+import Foundation
 import MobileCoreServices
 
 @objc(ShareMenuReactView)
@@ -65,12 +66,12 @@ public class ShareMenuReactView: NSObject {
 
         let extensionContext = viewDelegate.loadExtensionContext()
 
-        guard let item = extensionContext.inputItems.first as? NSExtensionItem else {
-            print("Error: \(COULD_NOT_FIND_ITEM_ERROR)")
+        guard let items = extensionContext.inputItems as? [NSExtensionItem] else {
+            print("Error: \(COULD_NOT_FIND_ITEMS_ERROR)")
             return
         }
 
-        viewDelegate.continueInApp(with: item, and: extraData)
+        viewDelegate.continueInApp(with: items, and: extraData)
     }
 
     @objc(data:reject:)
@@ -82,67 +83,96 @@ public class ShareMenuReactView: NSObject {
             return
         }
 
-        extractDataFromContext(context: extensionContext) { (data, mimeType, error) in
+        extractDataFromContext(context: extensionContext) { (data, error) in
             guard (error == nil) else {
                 reject("error", error?.description, nil)
                 return
             }
 
-            resolve([MIME_TYPE_KEY: mimeType, DATA_KEY: data])
+            resolve([DATA_KEY: data])
         }
     }
 
-    func extractDataFromContext(context: NSExtensionContext, withCallback callback: @escaping (String?, String?, NSException?) -> Void) {
-        let item:NSExtensionItem! = context.inputItems.first as? NSExtensionItem
-        let attachments:[AnyObject]! = item.attachments
+    func extractDataFromContext(context: NSExtensionContext, withCallback callback: @escaping ([Any]?, NSException?) -> Void) {
+        DispatchQueue.global().async {
+            let semaphore = DispatchSemaphore(value: 0)
+            let items:[NSExtensionItem]! = context.inputItems as? [NSExtensionItem]
+            var results: [[String: String]] = []
 
-        var urlProvider:NSItemProvider! = nil
-        var imageProvider:NSItemProvider! = nil
-        var textProvider:NSItemProvider! = nil
-        var dataProvider:NSItemProvider! = nil
+            for item in items {
+                guard let attachments = item.attachments else {
+                    callback(nil, NSException(name: NSExceptionName(rawValue: "Error"), reason:"couldn't find attachments", userInfo:nil))
+                    return
+                }
 
-        for provider in attachments {
-            if provider.hasItemConformingToTypeIdentifier(kUTTypeURL as String) {
-                urlProvider = provider as? NSItemProvider
-                break
-            } else if provider.hasItemConformingToTypeIdentifier(kUTTypeText as String) {
-                textProvider = provider as? NSItemProvider
-                break
-            } else if provider.hasItemConformingToTypeIdentifier(kUTTypeImage as String) {
-                imageProvider = provider as? NSItemProvider
-                break
-            } else if provider.hasItemConformingToTypeIdentifier(kUTTypeData as String) {
-                dataProvider = provider as? NSItemProvider
-                break
+                for provider in attachments {
+                    if provider.hasItemConformingToTypeIdentifier(kUTTypeURL as String) {
+                        provider.loadItem(forTypeIdentifier: kUTTypeURL as String, options: nil) { (item, error) in
+                            let url: URL! = item as? URL
+
+                            results.append([DATA_KEY: url.absoluteString, MIME_TYPE_KEY: "text/plain"])
+
+                            semaphore.signal()
+                        }
+                        semaphore.wait()
+                    } else if provider.hasItemConformingToTypeIdentifier(kUTTypeText as String) {
+                        provider.loadItem(forTypeIdentifier: kUTTypeText as String, options: nil) { (item, error) in
+                            let text:String! = item as? String
+
+                            results.append([DATA_KEY: text, MIME_TYPE_KEY: "text/plain"])
+
+                            semaphore.signal()
+                        }
+                        semaphore.wait()
+                    } else if provider.hasItemConformingToTypeIdentifier(kUTTypeImage as String) {
+                        provider.loadItem(forTypeIdentifier: kUTTypeImage as String, options: nil) { (item, error) in
+                            let imageUrl: URL! = item as? URL
+
+                            if (imageUrl != nil) {
+                                if let imageData = try? Data(contentsOf: imageUrl) {
+                                    results.append([DATA_KEY: imageUrl.absoluteString, MIME_TYPE_KEY: self.extractMimeType(from: imageUrl)])
+                                }
+                            } else {
+                                let image: UIImage! = item as? UIImage
+
+                                if (image != nil) {
+                                    let imageData: Data! = image.pngData();
+
+                                    // Creating temporary URL for image data (UIImage)
+                                    guard let imageURL = NSURL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("TemporaryScreenshot.png") else {
+                                        return
+                                    }
+
+                                    do {
+                                        // Writing the image to the URL
+                                        try imageData.write(to: imageURL)
+
+                                        results.append([DATA_KEY: imageUrl.absoluteString, MIME_TYPE_KEY: imageURL.extractMimeType()])
+                                    } catch {
+                                        callback(nil, NSException(name: NSExceptionName(rawValue: "Error"), reason:"Can't load image", userInfo:nil))
+                                    }
+                                }
+                            }
+
+                            semaphore.signal()
+                        }
+                        semaphore.wait()
+                    } else if provider.hasItemConformingToTypeIdentifier(kUTTypeData as String) {
+                        provider.loadItem(forTypeIdentifier: kUTTypeData as String, options: nil) { (item, error) in
+                            let url: URL! = item as? URL
+
+                            results.append([DATA_KEY: url.absoluteString, MIME_TYPE_KEY: self.extractMimeType(from: url)])
+
+                            semaphore.signal()
+                        }
+                        semaphore.wait()
+                    } else {
+                        callback(nil, NSException(name: NSExceptionName(rawValue: "Error"), reason:"couldn't find provider", userInfo:nil))
+                    }
+                }
             }
-        }
 
-        if (urlProvider != nil) {
-            urlProvider.loadItem(forTypeIdentifier: kUTTypeURL as String, options: nil) { (item, error) in
-                let url: URL! = item as? URL
-
-                callback(url.absoluteString, "text/plain", nil)
-            }
-        } else if (imageProvider != nil) {
-            imageProvider.loadItem(forTypeIdentifier: kUTTypeImage as String, options: nil) { (item, error) in
-                let url: URL! = item as? URL
-
-                callback(url.absoluteString, self.extractMimeType(from: url), nil)
-            }
-        } else if (textProvider != nil) {
-            textProvider.loadItem(forTypeIdentifier: kUTTypeText as String, options: nil) { (item, error) in
-                let text:String! = item as? String
-
-                callback(text, "text/plain", nil)
-            }
-        }  else if (dataProvider != nil) {
-            dataProvider.loadItem(forTypeIdentifier: kUTTypeData as String, options: nil) { (item, error) in
-                let url: URL! = item as? URL
-
-                callback(url.absoluteString, self.extractMimeType(from: url), nil)
-            }
-        } else {
-            callback(nil, nil, NSException(name: NSExceptionName(rawValue: "Error"), reason:"couldn't find provider", userInfo:nil))
+            callback(results, nil)
         }
     }
 

@@ -1,12 +1,22 @@
+buildscript {
+    ext {
+        rnsmDefaultTargetSdkVersion = 31
+        rnsmDefaultCompileSdkVersion = 31
+        rnsmDefaultMinSdkVersion = 21
+    }
+    ext.safeExtGet = {prop, fallback ->
+        rootProject.ext.has(prop) ? rootProject.ext.get(prop) : fallback
+    }
+}
+
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion 29
-    buildToolsVersion "29.0.2"
+    compileSdkVersion safeExtGet('compileSdkVersion', rnsmDefaultCompileSdkVersion)
 
     defaultConfig {
-        minSdkVersion 16
-        targetSdkVersion 29
+        minSdkVersion safeExtGet('minSdkVersion', rnsmDefaultCompileSdkVersion)
+        targetSdkVersion safeExtGet('targetSdkVersion', rnsmDefaultCompileSdkVersion)
         versionCode 1
         versionName "1.0"
         ndk {
