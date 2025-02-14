@@ -28,8 +28,11 @@ export default {
   getSharedText(callback) {
     this.getInitialShare(callback);
   },
-  getInitialShare(callback) {
-    ShareMenu.getSharedText(callback);
+  getInitialShare(callback, errorCallback = console.error) {
+    ShareMenu.getSharedText(
+      (data) => callback(data),
+      (error) => errorCallback('ShareMenu error:', error)
+    );
   },
   addNewShareListener(callback) {
     const subscription = EventEmitter.addListener(
