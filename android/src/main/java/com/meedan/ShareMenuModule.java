@@ -25,14 +25,13 @@ import java.util.ArrayList;
 import org.json.JSONObject;
 
 public class ShareMenuModule extends ReactContextBaseJavaModule implements ActivityEventListener {
-
-  // Events
-  final String NEW_SHARE_EVENT = "NewShareEvent";
-
-  // Keys
-  final String MIME_TYPE_KEY = "mimeType";
-  final String DATA_KEY = "data";
-  final String EXTRA_DATA_KEY = "extraData";
+  // Constants
+  private static final String NEW_SHARE_EVENT = "NewShareEvent";
+  private static final String MIME_TYPE_KEY = "mimeType";
+  private static final String DATA_KEY = "data";
+  private static final String EXTRA_DATA_KEY = "extraData";
+  private static final String TEXT_PLAIN_TYPE = "text/plain";
+  private static final String TEXT_UIC918_TYPE = "text/uic918";
 
   private ReactContext mReactContext;
 
@@ -52,24 +51,26 @@ public class ShareMenuModule extends ReactContextBaseJavaModule implements Activ
   @Nullable
   private ReadableMap extractShared(Intent intent)  {
     String type = intent.getType();
-
     if (type == null) {
       return null;
     }
 
     String action = intent.getAction();
-
     WritableMap data = Arguments.createMap();
     data.putString(MIME_TYPE_KEY, type);
 
     if (Intent.ACTION_SEND.equals(action)) {
-      if ("text/plain".equals(type)) {
-        data.putString(DATA_KEY, intent.getStringExtra(Intent.EXTRA_TEXT));
+      if (TEXT_PLAIN_TYPE.equals(type) || TEXT_UIC918_TYPE.equals(type)) {
+        String extraText = intent.getStringExtra(Intent.EXTRA_TEXT);
+        data.putString(DATA_KEY, extraText);
         Bundle bundle = intent.getExtras();
         if (bundle != null) {
           WritableMap record = new WritableNativeMap();
           for (String key : bundle.keySet()) {
-            record.putString(key, bundle.get(key).toString());
+            Object value = bundle.get(key);
+            if (value != null) {
+              record.putString(key, value.toString());
+            }
           }
           try {
             JSONObject jsonRecord = MapUtil.toJSONObject(record);
@@ -102,31 +103,34 @@ public class ShareMenuModule extends ReactContextBaseJavaModule implements Activ
   }
 
   @ReactMethod
-  public void getSharedText(Callback successCallback) {
+  public void getSharedText(Callback successCallback, Callback errorCallback) {
     Activity currentActivity = getCurrentActivity();
 
     if (currentActivity == null) {
+      errorCallback.invoke("No activity found");
       return;
     }
 
-    // If this isn't the root activity then make sure it is
-    if (!currentActivity.isTaskRoot()) {
-      Intent newIntent = new Intent(currentActivity.getIntent());
-      newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-      currentActivity.startActivity(newIntent);
+    try {
+      if (!currentActivity.isTaskRoot()) {
+        Intent newIntent = new Intent(currentActivity.getIntent());
+        newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        currentActivity.startActivity(newIntent);
 
-      ReadableMap shared = extractShared(newIntent);
+        ReadableMap shared = extractShared(newIntent);
+        successCallback.invoke(shared);
+        clearSharedText();
+        currentActivity.finish();
+        return;
+      }
+
+      Intent intent = currentActivity.getIntent();
+      ReadableMap shared = extractShared(intent);
       successCallback.invoke(shared);
       clearSharedText();
-      currentActivity.finish();
-      return;
+    } catch (Exception e) {
+      errorCallback.invoke(e.getMessage());
     }
-
-    Intent intent = currentActivity.getIntent();
-    
-    ReadableMap shared = extractShared(intent);
-    successCallback.invoke(shared);
-    clearSharedText();
   }
 
   @ReactMethod
