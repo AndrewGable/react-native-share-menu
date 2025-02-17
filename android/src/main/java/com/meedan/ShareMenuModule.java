@@ -51,17 +51,37 @@ public class ShareMenuModule extends ReactContextBaseJavaModule implements Activ
   @Nullable
   private ReadableMap extractShared(Intent intent)  {
     String type = intent.getType();
+    String action = intent.getAction();
+    
+    Log.d(TAG, "extractShared: Action: " + action);
+    
     if (type == null) {
+      Log.d(TAG, "extractShared: null type received");
+      Log.d(TAG, "Intent details - Action: " + intent.getAction() 
+          + ", Categories: " + (intent.getCategories() != null ? intent.getCategories().toString() : "null")
+          + ", Data URI: " + (intent.getData() != null ? intent.getData().toString() : "null"));
+      
+      Bundle extras = intent.getExtras();
+      if (extras != null) {
+        Log.d(TAG, "Intent extras:");
+        for (String key : extras.keySet()) {
+          Log.d(TAG, "  " + key + ": " + extras.get(key));
+        }
+      } else {
+        Log.d(TAG, "No extras in intent");
+      }
       return null;
     }
 
-    String action = intent.getAction();
+    Log.d(TAG, "extractShared: Processing share of type: " + type);
     WritableMap data = Arguments.createMap();
     data.putString(MIME_TYPE_KEY, type);
 
     if (Intent.ACTION_SEND.equals(action)) {
+      Log.d(TAG, "Processing ACTION_SEND");
       if (TEXT_PLAIN_TYPE.equals(type) || TEXT_UIC918_TYPE.equals(type)) {
         String extraText = intent.getStringExtra(Intent.EXTRA_TEXT);
+        Log.d(TAG, "Text content received: " + (extraText != null ? "length=" + extraText.length() : "null"));
         data.putString(DATA_KEY, extraText);
         Bundle bundle = intent.getExtras();
         if (bundle != null) {
@@ -84,14 +104,18 @@ public class ShareMenuModule extends ReactContextBaseJavaModule implements Activ
 
       Uri fileUri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
       if (fileUri != null) {
+        Log.d(TAG, "File URI received: " + fileUri.toString());
         data.putString(DATA_KEY, fileUri.toString());
         return data;
       }
     } else if (Intent.ACTION_SEND_MULTIPLE.equals(action)) {
+      Log.d(TAG, "Processing ACTION_SEND_MULTIPLE");
       ArrayList<Uri> fileUris = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
       if (fileUris != null) {
+        Log.d(TAG, "Multiple files received: count=" + fileUris.size());
         WritableArray uriArr = Arguments.createArray();
         for (Uri uri : fileUris) {
+          Log.d(TAG, "File URI: " + uri.toString());
           uriArr.pushString(uri.toString());
         }
         data.putArray(DATA_KEY, uriArr);
@@ -99,6 +123,7 @@ public class ShareMenuModule extends ReactContextBaseJavaModule implements Activ
       }
     }
 
+    Log.d(TAG, "No matching action/type combination found");
     return null;
   }
 
@@ -107,11 +132,13 @@ public class ShareMenuModule extends ReactContextBaseJavaModule implements Activ
     Activity currentActivity = getCurrentActivity();
 
     if (currentActivity == null) {
+      Log.e(TAG, "getSharedText: No activity found");
       errorCallback.invoke("No activity found");
       return;
     }
 
     try {
+      Log.d(TAG, "getSharedText: Processing share request");
       if (!currentActivity.isTaskRoot()) {
         Intent newIntent = new Intent(currentActivity.getIntent());
         newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -129,6 +156,7 @@ public class ShareMenuModule extends ReactContextBaseJavaModule implements Activ
       successCallback.invoke(shared);
       clearSharedText();
     } catch (Exception e) {
+      Log.e(TAG, "getSharedText: Error processing share", e);
       errorCallback.invoke(e.getMessage());
     }
   }
@@ -145,9 +173,11 @@ public class ShareMenuModule extends ReactContextBaseJavaModule implements Activ
 
   private void dispatchEvent(ReadableMap shared) {
     if (mReactContext == null || !mReactContext.hasActiveCatalystInstance()) {
+      Log.w(TAG, "dispatchEvent: Unable to emit event - React context is null or catalyst instance inactive");
       return;
     }
 
+    Log.d(TAG, "dispatchEvent: Emitting new share event");
     mReactContext
             .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
             .emit(NEW_SHARE_EVENT, shared);
@@ -180,11 +210,11 @@ public class ShareMenuModule extends ReactContextBaseJavaModule implements Activ
 
   @Override
   public void onNewIntent(Intent intent) {
-    // Possibly received a new share while the app was already running
-
+    Log.d(TAG, "onNewIntent: Received new share intent");
     Activity currentActivity = getCurrentActivity();
 
     if (currentActivity == null) {
+      Log.e(TAG, "onNewIntent: No activity found");
       return;
     }
 
