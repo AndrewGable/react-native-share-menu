@@ -24,7 +24,11 @@ import androidx.annotation.Nullable;
 import java.util.ArrayList;
 import org.json.JSONObject;
 
+import android.util.Log;
+
 public class ShareMenuModule extends ReactContextBaseJavaModule implements ActivityEventListener {
+  private static final String TAG = "ShareMenuModule";
+  
   // Constants
   private static final String NEW_SHARE_EVENT = "NewShareEvent";
   private static final String MIME_TYPE_KEY = "mimeType";
